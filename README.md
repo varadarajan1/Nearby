@@ -1,1 +1,1 @@
-Project for indoor positioning using BLE
+BLE BASED INDOOR POSTIONING APP BASED ON GOOGLE NEARBY API
