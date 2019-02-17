@@ -30,13 +30,16 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.nearby.Nearby;
+import com.google.android.gms.nearby.messages.Message;
 import com.google.android.gms.nearby.messages.MessageListener;
 import com.google.android.gms.nearby.messages.Messages;
 import com.google.android.gms.nearby.messages.MessagesOptions;
 import com.google.android.gms.nearby.messages.NearbyMessagesStatusCodes;
 import com.google.android.gms.nearby.messages.NearbyPermissions;
 import com.google.android.gms.nearby.messages.Strategy;
+import com.google.android.gms.nearby.messages.SubscribeCallback;
 import com.google.android.gms.nearby.messages.SubscribeOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -80,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        Utils.clearCachedMessages(this);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -240,11 +243,34 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Log.i(TAG, "Already subscribed.");
             return;
         }
+        MessageListener mMessageListener = new MessageListener() {
+            @Override
+            public void onFound(Message message) {
+                Log.d(TAG, "Found message: " + new String(message.getContent()));
+            }
 
+            @Override
+            public void onLost(Message message) {
+                Log.d(TAG, "Lost sight of message: " + new String(message.getContent()));
+            }
+        };
         SubscribeOptions options = new SubscribeOptions.Builder()
                 .setStrategy(Strategy.BLE_ONLY)
+                .setCallback(new SubscribeCallback(){
+                    @Override
+                    public void onExpired(){
+                        Log.d(TAG,"Stoped scannig");
+                    }
+
+                })
                 .build();
-//        Nearby.getMessagesClient(this).subscribe(getPendingIntent(),options);
+//      //  Nearby.getMessagesClient(this).subscribe(mMessageListener, options).addOnSuccessListener(new OnSuccessListener<Void>() {
+//            @Override
+//            public void onSuccess(Void aVoid) {
+////                startForegroundService(getBackgroundSubscribeServiceIntent());
+//                startService(getBackgroundSubscribeServiceIntent());
+//            }
+//        });
         Nearby.Messages.subscribe(mGoogleApiClient, getPendingIntent(), options)
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
@@ -263,12 +289,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     private PendingIntent getPendingIntent() {
-        return PendingIntent.getService(this, 0,
+        return PendingIntent.getService(getApplicationContext(), 0,
                 getBackgroundSubscribeServiceIntent(), PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private Intent getBackgroundSubscribeServiceIntent() {
-        return new Intent(this, BackgroundSubscribeIntentService.class);
+        return new Intent(getApplicationContext(), BackgroundSubscribeIntentService.class);
     }
 
     /**
@@ -315,5 +341,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                                 PERMISSIONS_REQUEST_CODE);
                     }
                 }).show();
+    }
+
+    @Override
+    public void onStop() {
+//        Nearby.getMessagesClient(this).unpublish(mMessage);
+//        Nearby.getMessagesClient(this).unsubscribe(mMessageListener);
+        super.onStop();
     }
 }

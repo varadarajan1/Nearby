@@ -40,7 +40,7 @@ public class BackgroundSubscribeIntentService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         if (intent != null) {
-            Nearby.getMessagesClient(this).handleIntent(intent, new MessageListener() {
+            Nearby.Messages.handleIntent(intent, new MessageListener() {
                 @Override
                 public void onFound(Message message) {
                     Log.i(TAG, "Found message via PendingIntent: " + message);

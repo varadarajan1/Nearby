@@ -80,4 +80,13 @@ public final class Utils {
                 context.getApplicationContext().getPackageName(),
                 Context.MODE_PRIVATE);
     }
+
+    static void clearCachedMessages(Context context){
+        ArrayList<String> cachedMessages = new ArrayList<>(getCachedMessages(context));
+        cachedMessages.clear();
+        getSharedPreferences(context)
+                .edit()
+                .putString(KEY_CACHED_MESSAGES, new Gson().toJson(cachedMessages))
+                .apply();
+    }
 }
