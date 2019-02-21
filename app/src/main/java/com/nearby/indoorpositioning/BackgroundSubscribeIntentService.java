@@ -56,8 +56,7 @@ public class BackgroundSubscribeIntentService extends IntentService {
             });
         }
     }
-
-
+    
     private void updateNotification() {
         List<String> messages = Utils.getCachedMessages(getApplicationContext());
         NotificationManager notificationManager =

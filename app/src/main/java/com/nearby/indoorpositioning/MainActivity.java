@@ -2,6 +2,7 @@ package com.nearby.indoorpositioning;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -347,6 +348,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void onStop() {
 //        Nearby.getMessagesClient(this).unpublish(mMessage);
 //        Nearby.getMessagesClient(this).unsubscribe(mMessageListener);
+        Nearby.Messages.unsubscribe(mGoogleApiClient,getPendingIntent());
+        stopService(getBackgroundSubscribeServiceIntent());
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+       notificationManager.cancel(1);
         super.onStop();
     }
 }

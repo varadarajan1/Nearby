@@ -20,8 +20,15 @@ public class LocationActivity extends AppCompatActivity implements SharedPrefere
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_location);
         List<String> locationList = Utils.getCachedMessages(this);
+
         if(!locationList.isEmpty()) {
             pinLocation(locationList);
+        }
+        else
+        {
+            final LayeredImageView v = new LayeredImageView(this);
+            v.setImageResource(R.drawable.floor_plan);
+            setContentView(v);
         }
     }
 
