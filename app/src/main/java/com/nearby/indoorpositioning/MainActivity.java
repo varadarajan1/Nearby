@@ -1,7 +1,7 @@
 package com.nearby.indoorpositioning;
 
 import android.Manifest;
-import android.annotation.SuppressLint;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -13,6 +13,7 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
+import android.support.v4.BuildConfig;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
@@ -30,12 +31,16 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.common.api.Status;
 import com.google.android.gms.nearby.Nearby;
+import com.google.android.gms.nearby.messages.BleSignal;
+import com.google.android.gms.nearby.messages.Distance;
+import com.google.android.gms.nearby.messages.Message;
 import com.google.android.gms.nearby.messages.MessageListener;
 import com.google.android.gms.nearby.messages.Messages;
 import com.google.android.gms.nearby.messages.MessagesOptions;
 import com.google.android.gms.nearby.messages.NearbyMessagesStatusCodes;
 import com.google.android.gms.nearby.messages.NearbyPermissions;
 import com.google.android.gms.nearby.messages.Strategy;
+import com.google.android.gms.nearby.messages.SubscribeCallback;
 import com.google.android.gms.nearby.messages.SubscribeOptions;
 
 import java.util.ArrayList;
@@ -80,7 +85,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        Utils.clearCachedMessages(this);
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
@@ -240,12 +245,25 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Log.i(TAG, "Already subscribed.");
             return;
         }
-
+        MessageListener mMessageListener = getMessageListener();
         SubscribeOptions options = new SubscribeOptions.Builder()
                 .setStrategy(Strategy.BLE_ONLY)
+                .setCallback(new SubscribeCallback() {
+                    @Override
+                    public void onExpired() {
+                        Log.d(TAG, "Stoped scannig");
+                    }
+
+                })
                 .build();
-//        Nearby.getMessagesClient(this).subscribe(getPendingIntent(),options);
-        Nearby.Messages.subscribe(mGoogleApiClient, getPendingIntent(), options)
+//      //  Nearby.getMessagesClient(this).subscribe(mMessageListener, options).addOnSuccessListener(new OnSuccessListener<Void>() {
+//            @Override
+//            public void onSuccess(Void aVoid) {
+////                startForegroundService(getBackgroundSubscribeServiceIntent());
+//                startService(getBackgroundSubscribeServiceIntent());
+//            }
+//        });
+        Nearby.Messages.subscribe(mGoogleApiClient, mMessageListener, options)
                 .setResultCallback(new ResultCallback<Status>() {
                     @Override
                     public void onResult(@NonNull Status status) {
@@ -259,16 +277,40 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         }
                     }
                 });
+    }
 
+    private MessageListener getMessageListener() {
+        return new MessageListener() {
+            @Override
+            public void onFound(Message message) {
+                Log.d(TAG, "Found message: " + new String(message.getContent()));
+            }
+
+            @Override
+            public void onBleSignalChanged(final Message message, final BleSignal bleSignal) {
+                Log.i(TAG, "Message: " + message + " has new BLE signal information: " + bleSignal.getRssi());
+                Utils.saveFoundMessage(getApplicationContext(), message, bleSignal);
+            }
+
+            @Override
+            public void onDistanceChanged(final Message message, final Distance distance) {
+                Log.i(TAG, "Distance changed, message: " + message + ", new distance: " + distance);
+            }
+
+            @Override
+            public void onLost(Message message) {
+                Log.d(TAG, "Lost sight of message: " + new String(message.getContent()));
+            }
+        };
     }
 
     private PendingIntent getPendingIntent() {
-        return PendingIntent.getService(this, 0,
+        return PendingIntent.getService(getApplicationContext(), 0,
                 getBackgroundSubscribeServiceIntent(), PendingIntent.FLAG_UPDATE_CURRENT);
     }
 
     private Intent getBackgroundSubscribeServiceIntent() {
-        return new Intent(this, BackgroundSubscribeIntentService.class);
+        return new Intent(getApplicationContext(), BackgroundSubscribeIntentService.class);
     }
 
     /**
@@ -315,5 +357,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                                 PERMISSIONS_REQUEST_CODE);
                     }
                 }).show();
+    }
+
+    @Override
+    public void onStop() {
+//        Nearby.getMessagesClient(this).unpublish(mMessage);
+//        Nearby.getMessagesClient(this).unsubscribe(mMessageListener);
+        Nearby.Messages.unsubscribe(mGoogleApiClient, getPendingIntent());
+        stopService(getBackgroundSubscribeServiceIntent());
+        NotificationManager notificationManager =
+                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.cancel(1);
+        super.onStop();
     }
 }
