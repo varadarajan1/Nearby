@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 
+import com.google.android.gms.nearby.messages.BleSignal;
 import com.google.android.gms.nearby.messages.Message;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -41,7 +42,7 @@ public final class Utils {
      * @param context The context.
      * @param message The Message whose payload (as string) is saved to SharedPreferences.
      */
-    static void saveFoundMessage(Context context, Message message) {
+    static void saveFoundMessage(Context context, Message message){
         ArrayList<String> cachedMessages = new ArrayList<>(getCachedMessages(context));
         Set<String> cachedMessagesSet = new HashSet<>(cachedMessages);
         String messageString = new String(message.getContent());
@@ -52,6 +53,26 @@ public final class Utils {
                     .putString(KEY_CACHED_MESSAGES, new Gson().toJson(cachedMessages))
                     .apply();
         }
+    }
+
+    static void saveFoundMessage(Context context, Message message, BleSignal signal){
+        ArrayList<String> cachedMessages = new ArrayList<>(getCachedMessages(context));
+        final Gson gsonParser = new Gson();
+        BeaconDataWithSignalStrength existingMessage = null;
+        if(cachedMessages.stream().count()>0)
+         existingMessage = gsonParser.fromJson(cachedMessages.get(0), BeaconDataWithSignalStrength.class);
+        BeaconData newMessage = gsonParser.fromJson(new String(message.getContent()), BeaconData.class);
+        if(isNewMessageBLENearer(signal, existingMessage, newMessage)){
+            cachedMessages.add(0, gsonParser.toJson(newMessage));
+            getSharedPreferences(context)
+                    .edit()
+                    .putString(KEY_CACHED_MESSAGES, gsonParser.toJson(cachedMessages))
+                    .apply();
+        }
+    }
+
+    private static boolean isNewMessageBLENearer(BleSignal signal, BeaconDataWithSignalStrength existingMessage, BeaconData newMessage) {
+        return existingMessage==null || signal.getRssi()>existingMessage.getRssi();
     }
 
     /**

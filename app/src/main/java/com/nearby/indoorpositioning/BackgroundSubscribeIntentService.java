@@ -13,6 +13,7 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.android.gms.nearby.Nearby;
+import com.google.android.gms.nearby.messages.BleSignal;
 import com.google.android.gms.nearby.messages.Message;
 import com.google.android.gms.nearby.messages.MessageListener;
 
@@ -53,6 +54,13 @@ public class BackgroundSubscribeIntentService extends IntentService {
                     Utils.removeLostMessage(getApplicationContext(), message);
                     updateNotification();
                 }
+
+                @Override
+                public void onBleSignalChanged(final Message message, final BleSignal bleSignal) {
+                    Utils.saveFoundMessage(getApplicationContext(), message);
+                    Log.i(TAG, "Message: " + message + " has new BLE signal information: " + bleSignal);
+                }
+
             });
         }
     }
